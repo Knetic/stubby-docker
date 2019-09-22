@@ -1,21 +1,16 @@
-version: '3'
+version: '2'
 services:
   stubby:
-    image: "mvance/stubby:latest"
-    networks:
-     - dns
+    image: "dot-stubby:local"
+    container_name: stubby
     restart: unless-stopped
   unbound:
-    image: "mvance/unbound:1.9.1-stubby"
+    image: "dot-unbound:local"
+    container_name: unbound
+    restart: unless-stopped
     depends_on:
       - "stubby"    
     ports:
      - "53:53/udp"
-    networks:
-     - dns
     volumes:
       - ./unbound/a-records.conf:/opt/unbound/etc/unbound/a-records.conf:ro
-    restart: unless-stopped
-
-networks:
-  dns:

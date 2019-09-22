@@ -1,4 +1,7 @@
 #!/bin/bash
 
-docker build -t mvance/stubby:latest ./stubby
-docker build -t mvance/unbound:1.9.1-stubby ./unbound
+docker build -t dot-stubby ./stubby
+docker tag dot-stubby:latest dot-stubby:local
+
+docker build -t dot-unbound ./unbound
+docker tag dot-unbound:latest dot-unbound:local
