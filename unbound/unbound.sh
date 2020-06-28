@@ -39,7 +39,7 @@ server:
   edns-buffer-size: 1472
   delay-close: 10000
   cache-min-ttl: 60
-  cache-max-ttl: 86400
+  cache-max-ttl: 1200
   do-daemonize: no
   deny-any: yes
   username: "_unbound"
