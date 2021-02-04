@@ -105,18 +105,18 @@ dnssec_return_status: GETDNS_EXTENSION_TRUE
 upstream_recursive_servers:
 
 ## LibreDNS with blocklist. DOT, DNSSEC, no ECS, no tracking, no logging.
-    - address_data: 116.202.176.26:853
-      tls_auth_name: dot.libredns.gr
+  - address_data: 116.202.176.26:853
+    tls_auth_name: dot.libredns.gr
 
 ## LibreDNS no blocklist.
-    - address_data: 116.202.176.26:853
-      tls_auth_name: dot.libredns.gr
+  - address_data: 116.202.176.26:853
+    tls_auth_name: dot.libredns.gr
 
 ## dnslify, same as above, but not german.
-    - address_data: 185.235.81.1
-      tls_auth_name: a.ns.dnslify.com
-    - address_data: 185.235.81.2
-      tls_auth_name: b.ns.dnslify.com
+  - address_data: 185.235.81.1
+    tls_auth_name: a.ns.dnslify.com
+  - address_data: 185.235.81.2
+    tls_auth_name: b.ns.dnslify.com
   
 # 2021: stop using quad9 since it blocks useful sites.
 ## Quad 9
