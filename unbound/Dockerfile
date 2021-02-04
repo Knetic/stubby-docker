@@ -1,62 +1,73 @@
 FROM debian:buster as openssl
 LABEL maintainer="Matthew Vance"
 
-ENV version_openssl=openssl-1.1.1c \
-    sha256_openssl=f6fb3079ad15076154eda9413fed42877d668e7069d9b87396d0804fdb3f4c90 \
-    source_openssl=https://www.openssl.org/source/ \
-    opgp_openssl=7953AC1FBC3DC8B3B292393ED5E9E43F7DF9EE8C
+ENV VERSION_OPENSSL=openssl-1.1.1i \
+    SHA256_OPENSSL=e8be6a35fe41d10603c3cc635e93289ed00bf34b79671a3a4de64fcee00d5242 \
+    SOURCE_OPENSSL=https://www.openssl.org/source/ \
+    OPGP_OPENSSL=8657ABB260F056B1E5190839D9C4D26D0E604491
 
 WORKDIR /tmp/src
 
 RUN set -e -x && \
     build_deps="build-essential ca-certificates curl dirmngr gnupg libidn2-0-dev libssl-dev" && \
-    debian_frontend=noninteractive apt-get update && apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
       $build_deps && \
-    curl -L "${source_openssl}${version_openssl}.tar.gz" -o openssl.tar.gz && \
-    echo "${sha256_openssl} ./openssl.tar.gz" | sha256sum -c - && \
-    curl -L "${source_openssl}${version_openssl}.tar.gz.asc" -o openssl.tar.gz.asc && \
+    curl -L $SOURCE_OPENSSL$VERSION_OPENSSL.tar.gz -o openssl.tar.gz && \
+    echo "${SHA256_OPENSSL} ./openssl.tar.gz" | sha256sum -c - && \
+    curl -L $SOURCE_OPENSSL$VERSION_OPENSSL.tar.gz.asc -o openssl.tar.gz.asc && \
     GNUPGHOME="$(mktemp -d)" && \
     export GNUPGHOME && \
-    ( gpg --no-tty --keyserver ipv4.pool.sks-keyservers.net --recv-keys "$opgp_openssl" \
-    || gpg --no-tty --keyserver ha.pool.sks-keyservers.net --recv-keys "$opgp_openssl" ) && \
+    ( gpg --no-tty --keyserver ipv4.pool.sks-keyservers.net --recv-keys "$OPGP_OPENSSL" \
+    || gpg --no-tty --keyserver ha.pool.sks-keyservers.net --recv-keys "$OPGP_OPENSSL" ) && \
     gpg --batch --verify openssl.tar.gz.asc openssl.tar.gz && \
     tar xzf openssl.tar.gz && \
-    cd "$version_openssl" && \
-    ./config --prefix=/opt/openssl no-weak-ssl-ciphers no-ssl3 no-shared -DOPENSSL_NO_HEARTBEATS -fstack-protector-strong && \
+    cd $VERSION_OPENSSL && \
+    /bin/sh -c 'if gcc -dM -E - </dev/null | grep -q __SIZEOF_INT128__; then export ECFLAG="enable-ec_nistp_64_gcc_128"; else export ECFLAG=""; fi' && \
+    ./config \
+      --prefix=/opt/openssl \
+      --openssldir=/opt/openssl \
+      no-weak-ssl-ciphers \
+      no-ssl3 \
+      no-shared \
+      $ECFLAG \
+      -DOPENSSL_NO_HEARTBEATS \
+      -fstack-protector-strong && \
     make depend && \
     make && \
     make install_sw && \
     apt-get purge -y --auto-remove \
       $build_deps && \
     rm -rf \
-      /tmp/* \
-      /var/tmp/* \
-      /var/lib/apt/lists/*
+        /tmp/* \
+        /var/tmp/* \
+        /var/lib/apt/lists/*
 
 FROM debian:buster as unbound
 LABEL maintainer="Matthew Vance"
 
-ENV unbound_version=1.9.1 \
-    unbound_sha256=c3c0bf9b86ccba4ca64f93dd4fe7351308ab54293f297a67de5a8914c1dc59c5 \
-    unbound_download_url="https://nlnetlabs.nl/downloads/unbound/unbound-1.9.1.tar.gz"
+ENV NAME=unbound \
+    UNBOUND_VERSION=1.13.0 \
+    UNBOUND_SHA256=a954043a95b0326ca4037e50dace1f3a207a0a19e9a4a22f4c6718fc623db2a1 \
+    UNBOUND_DOWNLOAD_URL=https://nlnetlabs.nl/downloads/unbound/unbound-1.13.0.tar.gz
 
 WORKDIR /tmp/src
 
 COPY --from=openssl /opt/openssl /opt/openssl
 
-RUN build_deps="ca-certificates curl gcc libc-dev libevent-dev libexpat1-dev make" && \
+RUN build_deps="curl gcc libc-dev libevent-dev libexpat1-dev libnghttp2-dev make" && \
     set -x && \
-    debian_frontend=noninteractive apt-get update && apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
       $build_deps \
       bsdmainutils \
+      ca-certificates \
       ldnsutils \
       libevent-2.1-6 \
       libexpat1 && \
-    curl -sSL "${unbound_download_url}" -o unbound.tar.gz && \
-    echo "${unbound_sha256} *unbound.tar.gz" | sha256sum -c - && \
+    curl -sSL $UNBOUND_DOWNLOAD_URL -o unbound.tar.gz && \
+    echo "${UNBOUND_SHA256} *unbound.tar.gz" | sha256sum -c - && \
     tar xzf unbound.tar.gz && \
     rm -f unbound.tar.gz && \
-    cd unbound-"${unbound_version}" && \
+    cd unbound-1.13.0 && \
     groupadd _unbound && \
     useradd -g _unbound -s /etc -d /dev/null _unbound && \
     ./configure \
@@ -66,50 +77,57 @@ RUN build_deps="ca-certificates curl gcc libc-dev libevent-dev libexpat1-dev mak
         --with-username=_unbound \
         --with-ssl=/opt/openssl \
         --with-libevent \
+        --with-libnghttp2 \
+        --enable-tfo-server \
+        --enable-tfo-client \
         --enable-event-api && \
     make install && \
     mv /opt/unbound/etc/unbound/unbound.conf /opt/unbound/etc/unbound/unbound.conf.example && \
     apt-get purge -y --auto-remove \
       $build_deps && \
-    rm -fr \
-      /opt/unbound/share/man \
-      /tmp/* \
-      /var/tmp/* \
-      /var/lib/apt/lists/*
+    rm -rf \
+        /opt/unbound/share/man \
+        /tmp/* \
+        /var/tmp/* \
+        /var/lib/apt/lists/*
+
 
 FROM debian:buster
 LABEL maintainer="Matthew Vance"
 
-ENV name=unbound \
-    unbound_version=1.9.1 \
-    version=1.2
+ENV NAME=unbound \
+    VERSION=1.1 \
+    SUMMARY="${NAME} is a validating, recursive, and caching DNS resolver." \
+    DESCRIPTION="${NAME} is a validating, recursive, and caching DNS resolver."
 
-ENV summary="${name} is a validating, recursive, and caching DNS resolver." \
-    description="${name} is a validating, recursive, and caching DNS resolver."
-
-LABEL summary="${summary}" \
-      description="${description}" \
-      io.k8s.description="${description}" \
-      io.k8s.display-name="Unbound ${unbound_version}" \
-      name="mvance/${name}" \
+LABEL summary="${SUMMARY}" \
+      description="${DESCRIPTION}" \
+      io.k8s.description="${DESCRIPTION}" \
+      io.k8s.display-name="Unbound ${UNBOUND_VERSION}" \
+      name="mvance/${NAME}" \
       maintainer="Matthew Vance"
 
 WORKDIR /tmp/src
 
-COPY --from=unbound /opt/ /opt/
+COPY --from=unbound /opt /opt
 
 RUN set -x && \
-    debian_frontend=noninteractive apt-get update && apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
       bsdmainutils \
+      ca-certificates \
       ldnsutils \
       libevent-2.1-6 \
+      libnghttp2-14 \
       libexpat1 && \
     groupadd _unbound && \
     useradd -g _unbound -s /etc -d /dev/null _unbound && \
-   rm -fr \
-      /tmp/* \
-      /var/tmp/* \
-      /var/lib/apt/lists/*
+    apt-get purge -y --auto-remove \
+      $build_deps && \
+    rm -rf \
+        /opt/unbound/share/man \
+        /tmp/* \
+        /var/tmp/* \
+        /var/lib/apt/lists/*
 
 COPY a-records.conf /opt/unbound/etc/unbound/
 COPY unbound.sh /
@@ -118,9 +136,10 @@ RUN chmod +x /unbound.sh
 
 WORKDIR /opt/unbound/
 
-ENV PATH /opt/unbound/sbin:$PATH
+ENV PATH /opt/unbound/sbin:"$PATH"
 
-EXPOSE 53
+EXPOSE 53/tcp
+EXPOSE 53/udp
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s CMD drill @127.0.0.1 cloudflare.com || exit 1
 

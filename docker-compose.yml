@@ -9,7 +9,7 @@ services:
     container_name: unbound
     restart: unless-stopped
     depends_on:
-      - "stubby"    
+      - "stubby"
     ports:
      - "53:53/udp"
     volumes:
