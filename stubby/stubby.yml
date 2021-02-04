@@ -81,8 +81,8 @@ tls_ca_path: "/etc/ssl/certs/"
 # specify a different port
 #
 listen_addresses:
-  -  0.0.0.0@8053
-  -  0:0:0:0:0:0:0:0@8053
+    - 0.0.0.0@8053
+    - 0:0:0:0:0:0:0:0@8053
 
 ############################### DNSSEC SETTINGS ################################
 # Require DNSSEC validation. For releases earlier than 1.2 a trust anchor must
@@ -103,28 +103,19 @@ dnssec_return_status: GETDNS_EXTENSION_TRUE
 # In Opportunistic mode they only require an IP address in address_data.
 #
 upstream_recursive_servers:
-
-## LibreDNS with blocklist. DOT, DNSSEC, no ECS, no tracking, no logging.
-  - address_data: 116.202.176.26:853
-    tls_auth_name: dot.libredns.gr
-
-## LibreDNS no blocklist.
-  - address_data: 116.202.176.26:853
-    tls_auth_name: dot.libredns.gr
-
-## dnslify, same as above, but not german.
-  - address_data: 185.235.81.1
-    tls_auth_name: a.ns.dnslify.com
-  - address_data: 185.235.81.2
-    tls_auth_name: b.ns.dnslify.com
-  
-# 2021: stop using quad9 since it blocks useful sites.
-## Quad 9
-#    - address_data: 9.9.9.9
-#      tls_auth_name: "dns.quad9.net"
-#    - address_data: 149.112.112.112
-#      tls_auth_name: "dns.quad9.net"
-
-## Quad 9 (ipv6)
-#    - address_data: 2620:fe::fe
-#      tls_auth_name: "dns.quad9.net"
+#
+    # LibreDNS with blocklist. DOT, DNSSEC, no ECS, no tracking, no logging.
+#    - address_data: 116.202.176.26:853
+#      tls_auth_name: "dot.libredns.gr"
+#
+    # LibreDNS no blocklist.
+#    - address_data: 116.202.176.26:854
+#      tls_auth_name: "dot.libredns.gr"
+#
+    # quad9, fallback.
+    - address_data: 9.9.9.9
+      tls_auth_name: "dns.quad9.net"
+    - address_data: 149.112.112.112
+      tls_auth_name: "dns.quad9.net"
+    - address_data: 2620:fe::fe
+      tls_auth_name: "dns.quad9.net"
